@@ -222,7 +222,7 @@ void Jabber::parsePresence(QString data) {
   if (root.attributeNode("type").value() == "unavailable") {
     t_j.show_status = QXMPP::ShowStatus::unknown;
     roster[lite_from] = t_j;
-    emit sigOnJabberContactStatus();
+    emit sigOnJabberUpdateContact();
     return;
   }
 
@@ -240,7 +240,7 @@ void Jabber::parsePresence(QString data) {
     t_j.msg_status = domElement.text();
   }
   roster[lite_from] = t_j;
-  emit sigOnJabberContactStatus();
+  emit sigOnJabberUpdateContact();
 }
 
 void Jabber::parseMessage(QString data) {

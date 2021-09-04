@@ -53,7 +53,7 @@ int main(int argc, char *argv[]) {
   QObject::connect(jabber, &QXMPP::Jabber::sigOnJabberDisconnect, &a, &jabberDisconnect);
   QObject::connect(jabber, &QXMPP::Jabber::sigOnJabberError, &a, &jabberError);
   QObject::connect(jabber, &QXMPP::Jabber::sigOnJabberMessage, &a, &JabberMessage);
-  QObject::connect(jabber, &QXMPP::Jabber::sigOnJabberContactStatus, &a, &jabberRosterUpdate);
+  QObject::connect(jabber, &QXMPP::Jabber::sigOnJabberUpdateContact, &a, &jabberRosterUpdate);
   jabber->Connect();
 
   return a.exec();

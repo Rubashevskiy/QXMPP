@@ -38,7 +38,7 @@ namespace QXMPP {
     void sigOnJabberMessage(QString, QString);
     void sigOnJabberError(QString);
     void sigOnJabberDisconnect();
-    void sigOnJabberContactStatus();
+    void sigOnJabberUpdateContact();
   private:
     void parsePackageHello(QString data);
     void parseIqData(QString data);
