@@ -30,15 +30,29 @@ void Sasl_PLAIN::runAuth() {
     stream << "<auth xmlns='urn:ietf:params:xml:ns:xmpp-sasl' mechanism='PLAIN'>"
            << QString::fromUtf8(encoded_response)
            << "</auth>";
-    transport->sendData(stream.readAll());
+    writeData(stream.readAll());
 }
 
 void Sasl_PLAIN::slotTransportData(QString data) {
+  if (jid.debug) {
+    qDebug() << ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>";
+    qDebug() << data;
+    qDebug() << ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>";
+  }
   QDomDocument doc;
   doc.setContent(data, false);
   QDomElement root = doc.documentElement();
   if (root.tagName() == "success") emit OnSaslOK();
   else emit OnSaslError("ERROR: user or password incorrect");
   return;
+}
+
+void Sasl_PLAIN::writeData(const QString &data) {
+  transport->sendData(data);
+  if (jid.debug) {
+    qDebug() << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<";
+    qDebug() << data;
+    qDebug() << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<";
+  }
 }
 

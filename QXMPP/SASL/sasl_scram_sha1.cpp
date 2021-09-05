@@ -17,10 +17,15 @@ void Sasl_SCRAM_SHA1::runAuth() {
   ss <<  "<auth xmlns='urn:ietf:params:xml:ns:xmpp-sasl' mechanism='SCRAM-SHA-1'>"
      << request
      << "</auth>";
-  transport->sendData(QString::fromUtf8(ss.str()));
+  writeData(QString::fromUtf8(ss.str()));
 }
 
 void Sasl_SCRAM_SHA1::slotTransportData(QString data) {
+  if (jid.debug) {
+    qDebug() << ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>";
+    qDebug() << data;
+    qDebug() << ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>";
+  }
   QDomDocument doc;
   doc.setContent(data, false);
   QDomElement root = doc.documentElement();
@@ -125,7 +130,16 @@ void Sasl_SCRAM_SHA1::slotTransportData(QString data) {
   ss << "<response xmlns='urn:ietf:params:xml:ns:xmpp-sasl'>"
      << Base64EncodedResponse
      << "</response>";
-  transport->sendData(QString::fromUtf8(ss.str()));
+  writeData(QString::fromUtf8(ss.str()));
+}
+
+void Sasl_SCRAM_SHA1::writeData(const QString &data) {
+  transport->sendData(data);
+  if (jid.debug) {
+    qDebug() << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<";
+    qDebug() << data;
+    qDebug() << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<";
+  }
 }
 
 

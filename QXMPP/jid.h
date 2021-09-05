@@ -29,6 +29,7 @@ namespace QXMPP {
 
   struct Jid {
     Jid() {}
+
     Jid(const Jid &other) {
       this->sasl = other.sasl;
       this->tls = other.tls;
@@ -43,7 +44,9 @@ namespace QXMPP {
       this->port = other.port;
       this->priority = other.priority;
       this->keep_alive = other.keep_alive;
+      this->debug = other.debug;
     }
+
     Jid(QString full_jid) {
       int pos_srv = full_jid.indexOf("@");
       int pos_res = full_jid.indexOf('/');
@@ -74,6 +77,7 @@ namespace QXMPP {
       this->port = other.port;
       this->priority = other.priority;
       this->keep_alive = other.keep_alive;
+      this->debug = other.debug;
     }
 
     QString getJid() {
@@ -128,6 +132,7 @@ namespace QXMPP {
     qint16  port = 5222;
     int priority = 5;
     bool keep_alive = true;
+    bool debug = false;
   };
 
 }

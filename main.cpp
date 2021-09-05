@@ -48,6 +48,7 @@ int main(int argc, char *argv[]) {
   user_jid.password = "user_password";
   user_jid.sasl = QXMPP::SASLType::AUTO;
   user_jid.tls = QXMPP::TLSType::AUTO;
+  user_jid.debug = true;
   jabber = new QXMPP::Jabber(user_jid, &a);
   QObject::connect(jabber, &QXMPP::Jabber::sigOnJabberConnect, &a, &jabberConnect);
   QObject::connect(jabber, &QXMPP::Jabber::sigOnJabberDisconnect, &a, &jabberDisconnect);

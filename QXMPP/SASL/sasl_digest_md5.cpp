@@ -8,10 +8,15 @@ SASL_DIGEST_MD5::SASL_DIGEST_MD5(const Jid user_jid, Transport *jabber_transport
 }
 
 void SASL_DIGEST_MD5::runAuth() {
-  transport->sendData("<auth xmlns='urn:ietf:params:xml:ns:xmpp-sasl' mechanism='DIGEST-MD5'/>");
+  writeData("<auth xmlns='urn:ietf:params:xml:ns:xmpp-sasl' mechanism='DIGEST-MD5'/>");
 }
 
 void SASL_DIGEST_MD5::slotTransportData(QString data) {
+  if (jid.debug) {
+    qDebug() << ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>";
+    qDebug() << data;
+    qDebug() << ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>";
+  }
   QDomDocument doc;
   doc.setContent(data, false);
   QDomElement root = doc.documentElement();
@@ -26,7 +31,7 @@ void SASL_DIGEST_MD5::slotTransportData(QString data) {
   QByteArray challenge = QByteArray::fromBase64(root.text().toUtf8(), QByteArray::Base64Encoding);
   QHash<QByteArray, QByteArray> challengeMap = challengeTokenize(challenge);
   if (challengeMap.contains("rspauth")) {
-    transport->sendData("<response xmlns='urn:ietf:params:xml:ns:xmpp-sasl'/>");
+    writeData("<response xmlns='urn:ietf:params:xml:ns:xmpp-sasl'/>");
     return;
   }
 
@@ -69,7 +74,7 @@ void SASL_DIGEST_MD5::slotTransportData(QString data) {
   qstream << "<response xmlns='urn:ietf:params:xml:ns:xmpp-sasl'>"
          << QString::fromUtf8(response)
          << "</response>";
-  transport->sendData(qstream.readAll());
+  writeData(qstream.readAll());
   return;
 }
 
@@ -87,6 +92,15 @@ std::string SASL_DIGEST_MD5::getMD5Hex(std::string input) {
   Hexit.MessageEnd();
 
   return stringToLower(tmp_output);
+}
+
+void SASL_DIGEST_MD5::writeData(const QString &data) {
+  transport->sendData(data);
+  if (jid.debug) {
+    qDebug() << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<";
+    qDebug() << data;
+    qDebug() << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<";
+  }
 }
 
 std::string SASL_DIGEST_MD5::getHA1(std::string x, std::string nonce, std::string cnonce) {

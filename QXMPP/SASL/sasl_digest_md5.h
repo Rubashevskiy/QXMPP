@@ -17,6 +17,7 @@ namespace QXMPP {
     private:
       std::string getHA1(std::string x, std::string nonce, std::string cnonce);
       std::string getMD5Hex(std::string input);
+      void writeData(const QString &data);
     private:
       Transport *transport = nullptr;
       Jid jid;

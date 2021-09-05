@@ -44,7 +44,10 @@ namespace QXMPP {
     void parseIqData(QString data);
     void parsePresence(QString data);
     void parseMessage(QString data);
+    void parseTLS(QString data);
     void runSaslAuth();
+
+    void writeData(QString data);
     void errorAndDisconnect(QString error);
   private slots:
     void slotTransportStatus(QXMPP::ConnectionStatus status);

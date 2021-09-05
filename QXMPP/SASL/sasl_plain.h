@@ -15,6 +15,8 @@ namespace QXMPP {
     private slots:
       void slotTransportData(QString data);
     private:
+      void writeData(const QString &data);
+    private:
       Transport *transport = nullptr;
       Jid jid;
   };

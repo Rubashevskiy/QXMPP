@@ -24,11 +24,10 @@ void Jabber::Connect() {
 }
 
 void Jabber::Disconnect() {
-  current_jabber_status = JabberStatus::Disconnect;
-  if (JabberStatus::Connected == current_jabber_status) {
-    transport->sendData(Package::getClose());
-  }
+  writeData(Package::getClose());
   transport->Disconnect();
+  current_jabber_status = JabberStatus::Disconnect;
+  emit sigOnJabberDisconnect();
 }
 
 void Jabber::Reconnect() {
@@ -37,7 +36,7 @@ void Jabber::Reconnect() {
 }
 
 void Jabber::sendMessage(const QString to, const QString body) {
-    transport->sendData(Package::getMessage(to, jid.getFullJid(), body));
+    writeData(Package::getMessage(to, jid.getFullJid(), body));
 }
 
 QHash<QString, Jid> Jabber::getRoster() {
@@ -49,12 +48,12 @@ void Jabber::slotTransportStatus(ConnectionStatus status) {
   switch (status) {
     case  ConnectionStatus::Connect: {
       current_jabber_status = JabberStatus::Connecting;
-      transport->sendData(Package::getPackageHello(jid.user, jid.host));
+      writeData(Package::getPackageHello(jid.user, jid.host));
       break;
     }
     case  ConnectionStatus::ConnectEncryption: {
       current_jabber_status = JabberStatus::ConnectingTLS;
-      transport->sendData(Package::getPackageHello(jid.user, jid.host));
+      writeData(Package::getPackageHello(jid.user, jid.host));
       break;
     }
     case  ConnectionStatus::Disconnect: {
@@ -76,22 +75,16 @@ void Jabber::slotTransportData(QString data) {
   for (const auto &pack_data : Package::divPackageData(data)) {
     if      (pack_data.contains("<stream:stream")) continue;
     else if (pack_data.contains("</stream:features>")) parsePackageHello(pack_data);
-    else if (pack_data.contains("urn:ietf:params:xml:ns:xmpp-tls")) {
-      if (data.contains("proceed")) transport->runTLSConnect();
-      else {
-        errorAndDisconnect("ERROR: SERVER CANCEL TLS");
-        continue;
-      }
-    }
-    else if (pack_data.contains("urn:ietf:params:xml:ns:xmpp-sasl")) continue;
+    else if (pack_data.contains("urn:ietf:params:xml:ns:xmpp-tls")) parseTLS(pack_data);
+    else if (pack_data.contains("urn:ietf:params:xml:ns:xmpp-sasl")) return;
     else if (pack_data.contains("<iq")) parseIqData(pack_data);
     else if (pack_data.contains("<presence")) parsePresence(pack_data);
     else if (pack_data.contains("<message")) parseMessage(data);
-    else if (pack_data.contains("</stream:stream>")) {
-      current_jabber_status =JabberStatus::Disconnect;
-      transport->Disconnect();
-      emit sigOnJabberDisconnect();
-      continue;
+    else if (pack_data.contains("</stream:stream>")) Disconnect();
+    if (jid.debug) {
+      qDebug() << ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>";
+      qDebug() << data;
+      qDebug() << ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>";
     }
   }
 }
@@ -106,25 +99,25 @@ void Jabber::slotSASLOK() {
   delete auth_sasl;
   auth_sasl = nullptr;
   current_jabber_status = JabberStatus::Auth;
-  transport->sendData(Package::getPackageHello(jid.user, jid.host));
+  writeData(Package::getPackageHello(jid.user, jid.host));
 }
 
 void Jabber::parsePackageHello(QString data) {
-  if (current_jabber_status == JabberStatus::Auth) transport->sendData(Package::getBindResource(jid.resource));
+  if (current_jabber_status == JabberStatus::Auth) writeData(Package::getBindResource(jid.resource));
   else {
     if (current_jabber_status != JabberStatus::ConnectingTLS) {
       bool check_tls = data.contains("<starttls");
       switch (jid.tls) {
         case QXMPP::TLSType::AUTO: {
           if (check_tls)  {
-            transport->sendData(Package::getPackageRunTLS());
+            writeData(Package::getPackageRunTLS());
             return;
           }
           else break;
         };
         case QXMPP::TLSType::TLS_ONLY: {
           if (check_tls) {
-            transport->sendData(Package::getPackageRunTLS());
+            writeData(Package::getPackageRunTLS());
             return;
           }
           else {
@@ -176,7 +169,7 @@ void Jabber::parseIqData(QString data) {
 
   if (("bindresource" == id_atr) && ("result" == res_atr)) {
     session_pid = Package::getRandomHexBytes(5);
-    transport->sendData(Package::getNewSession(session_pid));
+    writeData(Package::getNewSession(session_pid));
   }
   else if ((session_pid == id_atr) && ("result" == res_atr)) {
     if (data.contains("jabber:iq:roster")) {
@@ -193,16 +186,16 @@ void Jabber::parseIqData(QString data) {
         roster[r_jid.getJid()] = r_jid;
       }
       if (JabberStatus::Auth == current_jabber_status) {
-        transport->sendData(Package::getShow("online"));
-        transport->sendData(Package::getPriority(jid.priority));
-        transport->sendData(Package::getStatus(jid.msg_status));
+        writeData(Package::getShow("online"));
+        writeData(Package::getPriority(jid.priority));
+        writeData(Package::getStatus(jid.msg_status));
         current_jabber_status = JabberStatus::Connected;
         emit sigOnJabberConnect();
       }
     }
     else {
       session_pid = Package::getRandomHexBytes(5);
-      transport->sendData(Package::getRoster(session_pid));
+      writeData(Package::getRoster(session_pid));
     };
   }
 }
@@ -263,6 +256,11 @@ void Jabber::parseMessage(QString data) {
   }
 }
 
+void Jabber::parseTLS(QString data) {
+  if (data.contains("proceed")) transport->runTLSConnect();
+  else errorAndDisconnect("ERROR: SERVER CANCEL TLS");
+}
+
 void Jabber::runSaslAuth() {
   switch (jid.sasl) {
     case QXMPP::SASLType::Plain: auth_sasl = new Sasl_PLAIN(jid, transport); break;
@@ -273,6 +271,15 @@ void Jabber::runSaslAuth() {
   QObject::connect(auth_sasl, &Sasl_Base::OnSaslError, this, &Jabber::slotSASLError);
   QObject::connect(auth_sasl, &Sasl_Base::OnSaslOK, this, &Jabber::slotSASLOK);
   auth_sasl->runAuth();
+}
+
+void Jabber::writeData(QString data) {
+  transport->sendData(data);
+  if (jid.debug) {
+    qDebug() << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<";
+    qDebug() << data;
+    qDebug() << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<";
+  }
 }
 
 void Jabber::errorAndDisconnect(QString error) {
